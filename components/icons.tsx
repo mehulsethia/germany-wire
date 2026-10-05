@@ -13,3 +13,8 @@ export const IconTable = ({ size }: P) => <svg {...base} {...sz(size)}><rect x="
 export const IconRefresh = ({ size }: P) => <svg {...base} {...sz(size)}><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4" /></svg>;
 export const IconX = ({ size }: P) => <svg {...base} {...sz(size)}><path d="M6 6l12 12M18 6 6 18" /></svg>;
 export const IconArrow = ({ dir }: { dir: "asc" | "desc" }) => <svg {...base} width={12} height={12}>{dir === "asc" ? <path d="M12 19V5M6 11l6-6 6 6" /> : <path d="M12 5v14M6 13l6 6 6-6" />}</svg>;
+export const IconThumb = ({ size, down, filled }: P & { down?: boolean }) => (
+  <svg {...base} {...sz(size)} fill={filled ? "currentColor" : "none"} style={down ? { transform: "rotate(180deg)" } : undefined}>
+    <path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3zM7 11l4-7a2 2 0 0 1 2 2v3h5.5a2 2 0 0 1 2 2.3l-1 6A2 2 0 0 1 17.5 20H7" />
+  </svg>
+);

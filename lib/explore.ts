@@ -12,11 +12,12 @@ export type Filters = {
   deadlineOnly: boolean;
   sensitiveOnly: boolean;
   savedOnly: boolean;
+  hiddenOnly: boolean;
 };
 
 export const DEFAULT_FILTERS: Filters = {
   q: "", cats: [], source: "", period: "all", minScore: 0,
-  deadlineOnly: false, sensitiveOnly: false, savedOnly: false,
+  deadlineOnly: false, sensitiveOnly: false, savedOnly: false, hiddenOnly: false,
 };
 export const DEFAULT_SORT: Sort = { key: "date", dir: "desc" };
 
@@ -37,10 +38,11 @@ export const isFiltered = (f: Filters) =>
 
 const day = (iso: string) => new Date(`${iso}T00:00:00Z`).getTime();
 
-export function applyFilters(list: Article[], f: Filters, saved: string[], nowMs: number): Article[] {
+export function applyFilters(list: Article[], f: Filters, saved: string[], hidden: string[], nowMs: number): Article[] {
   const terms = f.q.toLowerCase().split(/\s+/).filter(Boolean);
   const cutoff = f.period === "all" ? 0 : nowMs - Number(f.period) * 864e5;
   return list.filter((a) => {
+    if (hidden.includes(a.id) !== f.hiddenOnly) return false; // downvoted stories live in their own view
     if (f.cats.length && !f.cats.includes(a.category)) return false;
     if (f.source && a.source_name !== f.source) return false;
     if (a.relevance_score < f.minScore) return false;
@@ -49,7 +51,7 @@ export function applyFilters(list: Article[], f: Filters, saved: string[], nowMs
     if (f.savedOnly && !saved.includes(a.id)) return false;
     if (cutoff && new Date(a.published_at).getTime() < cutoff) return false;
     if (terms.length) {
-      const hay = `${a.title_en} ${a.summary_en} ${a.title_de} ${a.source_name} ${getCategory(a.category).label}`.toLowerCase();
+      const hay = `${a.title_en} ${a.summary_en} ${a.title_de} ${a.source_name} ${getCategory(a.category).label} ${a.why_it_matters ?? ""}`.toLowerCase();
       if (!terms.every((t) => hay.includes(t))) return false;
     }
     return true;

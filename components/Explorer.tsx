@@ -8,6 +8,7 @@ import {
   type Filters, type Sort, type SortKey,
 } from "@/lib/explore";
 import { useSaved } from "@/lib/useSaved";
+import { useVotes } from "@/lib/useVotes";
 import ArticleCard from "./ArticleCard";
 import ArticleTable from "./ArticleTable";
 import EmptyState from "./EmptyState";
@@ -39,6 +40,8 @@ const toggleCls = (on: boolean) =>
 export default function Explorer({ articles, nowIso, lastUpdated, greeting, today, demo }: Props) {
   const nowMs = useMemo(() => new Date(nowIso).getTime(), [nowIso]);
   const { ids: saved } = useSaved();
+  const { votes } = useVotes();
+  const hidden = useMemo(() => Object.keys(votes).filter((id) => votes[id] === -1), [votes]);
   const [f, setF] = useState<Filters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
   const [view, setView] = useState<"cards" | "table">("cards");
@@ -92,9 +95,9 @@ export default function Explorer({ articles, nowIso, lastUpdated, greeting, toda
     return m;
   }, [articles]);
 
-  const filtered = useMemo(() => applyFilters(articles, f, saved, nowMs), [articles, f, saved, nowMs]);
+  const filtered = useMemo(() => applyFilters(articles, f, saved, hidden, nowMs), [articles, f, saved, hidden, nowMs]);
   const items = useMemo(() => applySort(filtered, sort), [filtered, sort]);
-  const digest = useMemo(() => pickDigest(articles, nowMs), [articles, nowMs]);
+  const digest = useMemo(() => pickDigest(articles.filter((a) => !hidden.includes(a.id)), nowMs), [articles, hidden, nowMs]);
 
   const filtering = isFiltered(f);
   const effView = wide ? view : "cards";
@@ -109,7 +112,7 @@ export default function Explorer({ articles, nowIso, lastUpdated, greeting, toda
   const visible = list.slice((cur - 1) * pageSize, cur * pageSize);
   const from = list.length ? (cur - 1) * pageSize + 1 : 0;
   const to = Math.min(cur * pageSize, list.length);
-  const activeCount = [f.period !== "all", f.source, f.minScore, f.deadlineOnly, f.sensitiveOnly, f.savedOnly].filter(Boolean).length;
+  const activeCount = [f.period !== "all", f.source, f.minScore, f.deadlineOnly, f.sensitiveOnly, f.savedOnly, f.hiddenOnly].filter(Boolean).length;
 
   const todayStr = new Date(nowMs).toISOString().slice(0, 10);
   const upcoming = articles.filter((a) => a.deadline_date && a.deadline_date >= todayStr).length;
@@ -193,6 +196,9 @@ export default function Explorer({ articles, nowIso, lastUpdated, greeting, toda
           <button type="button" aria-pressed={f.deadlineOnly} onClick={() => patch({ deadlineOnly: !f.deadlineOnly })} className={toggleCls(f.deadlineOnly)}>Has a date</button>
           <button type="button" aria-pressed={f.sensitiveOnly} onClick={() => patch({ sensitiveOnly: !f.sensitiveOnly })} className={toggleCls(f.sensitiveOnly)}>Time-sensitive</button>
           <button type="button" aria-pressed={f.savedOnly} onClick={() => patch({ savedOnly: !f.savedOnly })} className={toggleCls(f.savedOnly)}>Saved{saved.length ? ` (${saved.length})` : ""}</button>
+          {(hidden.length > 0 || f.hiddenOnly) && (
+            <button type="button" aria-pressed={f.hiddenOnly} onClick={() => patch({ hiddenOnly: !f.hiddenOnly })} className={toggleCls(f.hiddenOnly)} title="Stories you marked as not useful. Press the thumb again to restore.">Hidden by you ({hidden.length})</button>
+          )}
           {(filtering || sort.key !== "date" || sort.dir !== "desc") && (
             <button type="button" onClick={reset} className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-muted hover:text-ink">
               <IconX size={14} /> Reset

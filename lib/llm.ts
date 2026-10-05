@@ -6,6 +6,7 @@ import type { RawItem } from "./types";
 const Result = z.object({
   title_en: z.string().min(1),
   summary_en: z.string().min(1),
+  why_it_matters: z.string().nullable(),
   relevance_score: z.number().min(0).max(100),
   category: z.enum(CATEGORY_IDS),
   is_time_sensitive: z.boolean(),
@@ -14,6 +15,8 @@ const Result = z.object({
 export type LlmResult = z.infer<typeof Result>;
 
 const SYSTEM = `You are the strict editor of "Germany Wire", a short daily briefing for Indians and other non-German expats living in Germany (skilled workers on Blue Card or work visas, students, families, people renewing residence permits). Your main job is to REJECT noise. Readers are busy and anxious about German admin; a boring feed makes them leave.
+
+Most readers are Indian nationals (IT and engineering professionals on the EU Blue Card, Chancenkarte holders, master's students, spouses and families). Give extra weight to what affects them specifically: Blue Card and skilled-worker rules, salary thresholds, Chancenkarte, student visas and work rights after study, recognition of Indian degrees and professional qualifications, family reunification, permanent residence and citizenship timelines, India-Germany agreements, and anything about taxes, health insurance or pensions paid by foreign employees.
 
 Judge each German item with one question: "Would an Indian expat living in Germany actually need to know this, or change something they do?"
 
@@ -24,6 +27,7 @@ Score low (0-39) for: foreign policy and wars, military, crime and court cases, 
 Return ONLY a JSON object (no prose, no code fences) with:
 - title_en: clear, plain English headline (max ~90 chars). No clickbait.
 - summary_en: 2-3 short, warm sentences in plain English. Say what changed and what it means for an expat's life or paperwork. Never invent facts that are not in the input; if the input is thin, say less. Explain German terms the first time (e.g. "Aufenthaltstitel (residence permit)").
+- why_it_matters: ONE concrete sentence (max 30 words) naming who is affected and what they should know or do, e.g. "Affects Blue Card holders renewing in 2027: the salary threshold rises." If you cannot write a concrete one, return null. Vague lines such as "this may be of interest" mean null. Items with null are discarded.
 - relevance_score: integer 0-100 per the rubric above.
 - category: exactly one of: ${CATEGORY_IDS.join(", ")}. Use "other" only for important Germany news that fits nowhere else.
 - is_time_sensitive: true only if there is a deadline, a rule taking effect on a specific date, or something people must act on soon.
@@ -38,7 +42,7 @@ async function viaOpenAI(user: string): Promise<string> {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
-        temperature: 0.2,
+        temperature: 0,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM },
@@ -60,7 +64,8 @@ async function viaClaude(user: string): Promise<string> {
   anthropic ??= new Anthropic({ maxRetries: 3 });
   const msg = await anthropic.messages.create({
     model: process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
-    max_tokens: 700,
+    max_tokens: 800,
+    temperature: 0,
     system: SYSTEM,
     messages: [{ role: "user", content: user }],
   });
@@ -68,11 +73,19 @@ async function viaClaude(user: string): Promise<string> {
   return block && block.type === "text" ? block.text : "";
 }
 
-/** Configured providers, used turn by turn so neither key is overused. */
+/**
+ * Providers in the order they should be tried.
+ * Default: one fixed scorer (OPENAI first, else Claude) so every item is judged by the same model and
+ * scores stay comparable; the other key only covers for errors.
+ * LLM_MODE=alternate rotates between them item by item to spread usage.
+ */
 function providers() {
   const list: ((user: string) => Promise<string>)[] = [];
-  if (process.env.OPENAI_API_KEY) list.push(viaOpenAI);
-  if (process.env.ANTHROPIC_API_KEY) list.push(viaClaude);
+  const primary = (process.env.LLM_SCORER ?? "openai").toLowerCase();
+  const openai = process.env.OPENAI_API_KEY ? viaOpenAI : null;
+  const claude = process.env.ANTHROPIC_API_KEY ? viaClaude : null;
+  const ordered = primary === "anthropic" ? [claude, openai] : [openai, claude];
+  ordered.forEach((p) => p && list.push(p));
   return list;
 }
 
@@ -80,12 +93,19 @@ export const llmConfigured = () => providers().length > 0;
 
 let turn = 0;
 
-export async function analyze(item: RawItem): Promise<LlmResult> {
-  const user = `Source: ${item.sourceName}\nPublished: ${item.publishedAt}\nTitle (German): ${item.title}\nContent (German): ${item.body.slice(0, 3000) || "(none)"}`;
+export type Examples = { useful: string[]; notUseful: string[] };
+
+function examplesBlock(ex?: Examples) {
+  if (!ex || (!ex.useful.length && !ex.notUseful.length)) return "";
+  const fmt = (t: string[]) => t.map((x) => `- ${x}`).join("\n");
+  return `\n\nReaders have rated earlier stories. Learn from them.\nMarked NOT useful (score items like these low):\n${fmt(ex.notUseful) || "- (none)"}\nMarked useful (score items like these higher):\n${fmt(ex.useful) || "- (none)"}`;
+}
+
+export async function analyze(item: RawItem, ex?: Examples): Promise<LlmResult> {
+  const user = `Source: ${item.sourceName}\nPublished: ${item.publishedAt}\nTitle (German): ${item.title}\nContent (German): ${item.body.slice(0, 3000) || "(none)"}${examplesBlock(ex)}`;
   const list = providers();
-  const start = turn++;
+  const start = process.env.LLM_MODE === "alternate" ? turn++ : 0;
   let lastErr: unknown;
-  // next provider's turn first; if it errors, the other one covers
   for (let i = 0; i < list.length; i++) {
     try {
       const raw = await list[(start + i) % list.length](user);

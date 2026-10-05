@@ -17,7 +17,7 @@ With no Supabase keys the app shows clearly-labelled **sample content**, so the 
 4. Fill it the first time: `curl "https://YOUR-APP/api/cron/ingest?key=$CRON_SECRET"`
 
 ## Pipeline ([lib/pipeline.ts](lib/pipeline.ts))
-fetch 4 sources (one failing never stops the rest) → dedupe by URL vs DB → the LLM (OpenAI and Claude, alternating) translates, summarizes, scores 0-100, categorizes, flags deadlines ([lib/llm.ts](lib/llm.ts)) → drop below `RELEVANCE_THRESHOLD` (35) → upsert.
+fetch 4 sources (one failing never stops the rest) → dedupe by URL vs DB → the LLM (OpenAI and Claude, alternating) translates, summarizes, scores 0-100, categorizes, flags deadlines ([lib/llm.ts](lib/llm.ts)) → drop below `RELEVANCE_THRESHOLD` (50) → upsert.
 
 Sources (all free, no paid APIs): Tagesschau API, Bundesregierung RSS, BAMF press RSS, Bundestag RSS (12 topic feeds), Bundestag DIP API (free key, skipped without it), Bundesrat PlenumKOMPAKT RSS, Gesetze im Internet new-laws RSS. Not covered: make-it-in-germany.com and arbeitsagentur.de publish no RSS or news API.
 

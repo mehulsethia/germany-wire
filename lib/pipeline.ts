@@ -1,10 +1,10 @@
-import { analyze } from "./llm";
+import { judge } from "./judge";
+import { getExamples } from "./feedback";
 import { supabase } from "./supabase";
 import { SOURCES } from "./sources";
 import type { RawItem } from "./types";
 
 export async function runIngest() {
-  const threshold = Number(process.env.RELEVANCE_THRESHOLD ?? 35);
   const cap = Number(process.env.MAX_NEW_PER_RUN ?? 60);
   const report: Record<string, unknown> = { sources: {}, stored: 0, discarded: 0, failed: 0 };
 
@@ -43,27 +43,30 @@ export async function runIngest() {
   report.new = fresh.length;
   report.remaining = unseen.length - fresh.length; // still waiting for the next run
 
-  // 3. LLM filter + translate, small concurrency
+  // 3. LLM filter + translate, small concurrency. Reader feedback steers the model.
+  const examples = await getExamples();
   const rows: Record<string, unknown>[] = [];
   const rejected: { source_url: string; relevance_score: number }[] = [];
   for (let i = 0; i < fresh.length; i += 3) {
     await Promise.all(
       fresh.slice(i, i + 3).map(async (item) => {
         try {
-          const r = await analyze(item);
-          if (r.relevance_score < threshold) {
+          const v = await judge(item, examples);
+          if (!v.keep) {
             report.discarded = (report.discarded as number) + 1;
-            rejected.push({ source_url: item.url, relevance_score: Math.round(r.relevance_score) });
+            rejected.push({ source_url: item.url, relevance_score: v.score });
             return;
           }
+          const r = v.result;
           rows.push({
             source_name: item.sourceName,
             source_url: item.url,
             title_de: item.title,
             title_en: r.title_en,
             summary_en: r.summary_en,
+            why_it_matters: r.why_it_matters,
             category: r.category,
-            relevance_score: Math.round(r.relevance_score),
+            relevance_score: v.score,
             published_at: item.publishedAt,
             is_time_sensitive: r.is_time_sensitive,
             deadline_date: r.deadline_date,
@@ -77,9 +80,14 @@ export async function runIngest() {
 
   // 4. store (upsert on source_url = safe if two runs overlap)
   if (rows.length) {
-    const { error: insErr } = await supabase()
+    let { error: insErr } = await supabase()
       .from("articles")
       .upsert(rows, { onConflict: "source_url", ignoreDuplicates: true });
+    if (insErr?.message.includes("why_it_matters")) {
+      // column not added yet: store without it rather than losing the run
+      const slim = rows.map(({ why_it_matters: _w, ...rest }) => rest);
+      ({ error: insErr } = await supabase().from("articles").upsert(slim, { onConflict: "source_url", ignoreDuplicates: true }));
+    }
     if (insErr) throw insErr;
   }
   if (rejected.length) await supabase().from("rejected_urls").upsert(rejected, { onConflict: "source_url", ignoreDuplicates: true });

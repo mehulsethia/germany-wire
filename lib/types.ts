@@ -7,6 +7,7 @@ export type Article = {
   title_de: string;
   title_en: string;
   summary_en: string;
+  why_it_matters?: string | null;
   category: CategoryId;
   relevance_score: number;
   published_at: string;

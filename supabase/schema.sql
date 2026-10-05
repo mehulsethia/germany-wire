@@ -46,6 +46,19 @@ create table if not exists public.ingest_runs (
 );
 alter table public.ingest_runs enable row level security;
 
+-- Why a story matters to an expat (written by the LLM; stories without one are dropped).
+alter table public.articles add column if not exists why_it_matters text;
+
+-- Reader votes (thumbs up / down). One vote per browser per story. Feeds back into the filter.
+create table if not exists public.feedback (
+  article_id uuid references public.articles on delete cascade not null,
+  voter text not null,
+  vote smallint not null check (vote in (-1, 1)),
+  created_at timestamptz not null default now(),
+  primary key (article_id, voter)
+);
+alter table public.feedback enable row level security;
+
 -- Phase 2 (accounts): bookmarks
 -- create table public.user_saves (
 --   user_id uuid references auth.users not null,

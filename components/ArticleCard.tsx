@@ -50,6 +50,10 @@ export default function ArticleCard({ article: a }: { article: Article }) {
       <h3 className="mt-3 text-[17px] font-semibold leading-[1.3] tracking-[-0.015em] text-ink">{a.title_en}</h3>
       <p className="mt-2 text-[14px] leading-[1.6] text-muted">{a.summary_en}</p>
 
+      {a.why_it_matters && (
+        <p className="mt-3 border-l-2 border-forest pl-3 text-[13.5px] font-medium leading-snug text-forest">{a.why_it_matters}</p>
+      )}
+
       {hasDeadline && (
         <div className="mt-3.5">
           <DeadlineStrip date={a.deadline_date!} />

@@ -30,7 +30,7 @@ export default function ArticleTable({ items, sort, onSort }: { items: Article[]
                 </button>
               </th>
             ))}
-            <th scope="col" className="w-[96px] px-4 py-2.5"><span className="sr-only">Actions</span></th>
+            <th scope="col" className="w-[150px] px-4 py-2.5"><span className="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>
@@ -48,6 +48,7 @@ export default function ArticleTable({ items, sort, onSort }: { items: Article[]
                 <td className="px-4 py-3">
                   <div className="font-semibold leading-snug text-ink">{a.title_en}</div>
                   <div className="mt-0.5 line-clamp-2 text-[13px] leading-relaxed text-muted">{a.summary_en}</div>
+                  {a.why_it_matters && <div className="mt-1 text-[12.5px] font-medium text-forest">{a.why_it_matters}</div>}
                 </td>
                 <td className="px-4 py-3">
                   <a href={a.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-forest hover:underline">
