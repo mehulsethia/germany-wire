@@ -1,35 +1,39 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree, Fraunces } from "next/font/google";
+import { Geist } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
-const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
-const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axes: ["opsz", "SOFT"] });
+const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Germany Wire",
-  description: "German news and admin changes that affect expats, translated into calm, plain English.",
+  description: "German news and admin changes that affect expats, translated into plain English.",
 };
 
-export const viewport: Viewport = { themeColor: "#f6f3ea" };
+export const viewport: Viewport = { themeColor: "#f5f5f0" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${figtree.variable} ${fraunces.variable}`}>
+    <html lang="en" className={geist.variable}>
       <body className="min-h-dvh">
-        <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-6 sm:px-6 sm:pt-10">
-          <header className="mb-6 flex items-baseline justify-between">
-            <Link href="/" className="font-serif text-2xl font-semibold tracking-tight text-sage-deep">
+        <div className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-5 sm:px-6">
+          <header className="mb-5 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2.5 text-lg font-semibold tracking-[-0.02em]">
+              <span aria-hidden="true" className="flex w-5 flex-col gap-[3px]">
+                <span className="h-[5px] rounded-[1px] bg-ink" />
+                <span className="h-[5px] rounded-[1px] bg-forest" />
+                <span className="h-[5px] rounded-[1px] bg-amber" />
+              </span>
               Germany Wire
             </Link>
-            <nav className="flex gap-5 text-sm font-medium text-ink-soft">
-              <Link href="/" className="hover:text-ink">Briefing</Link>
-              <Link href="/saved" className="hover:text-ink">Saved</Link>
+            <nav className="flex gap-1 text-sm font-medium text-muted">
+              <Link href="/" className="rounded-md px-3 py-1.5 hover:bg-line/60 hover:text-ink">Briefing</Link>
+              <Link href="/saved" className="rounded-md px-3 py-1.5 hover:bg-line/60 hover:text-ink">Saved</Link>
             </nav>
           </header>
           {children}
-          <footer className="mt-16 text-sm leading-relaxed text-ink-faint">
-            Summaries are written by AI from official German sources. Always check the original before you act on anything legal or visa-related.
+          <footer className="mt-16 max-w-xl text-[13px] leading-relaxed text-faint">
+            Summaries are written by AI from official German sources. Check the original before you act on anything legal or visa-related.
           </footer>
         </div>
       </body>

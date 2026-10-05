@@ -1,15 +1,15 @@
 export const CATEGORIES = [
-  { id: "immigration", label: "Immigration", dot: "#5b7f95", bg: "#e4edf1", fg: "#2f4d5f" },
-  { id: "new-laws", label: "New laws & reforms", dot: "#7a6a9a", bg: "#ebe7f2", fg: "#4a3f66" },
-  { id: "jobs", label: "Jobs", dot: "#5f8a6b", bg: "#e3eee6", fg: "#2f5a3c" },
-  { id: "taxes", label: "Taxes", dot: "#a07a4f", bg: "#f1e9dd", fg: "#6a4c27" },
-  { id: "money", label: "Money", dot: "#4f8a82", bg: "#dfeeeb", fg: "#27564f" },
-  { id: "healthcare", label: "Healthcare", dot: "#b0697a", bg: "#f3e4e8", fg: "#6e3446" },
-  { id: "social-benefits", label: "Social benefits", dot: "#8a8f4f", bg: "#eceedb", fg: "#555a26" },
-  { id: "housing", label: "Housing & cost of living", dot: "#b07a5a", bg: "#f3e6dd", fg: "#6e4630" },
-  { id: "family", label: "Family", dot: "#a8708f", bg: "#f2e5ed", fg: "#6b3e58" },
-  { id: "transport", label: "Transport", dot: "#6a86a8", bg: "#e4eaf2", fg: "#33496a" },
-  { id: "other", label: "Other important news", dot: "#8b9097", bg: "#eceeef", fg: "#464b52" },
+  { id: "immigration", label: "Immigration", dot: "#2f6f8f", fg: "#1f4f68" },
+  { id: "new-laws", label: "New laws & reforms", dot: "#6d58a8", fg: "#47377a" },
+  { id: "jobs", label: "Jobs", dot: "#2e8b57", fg: "#1c5f3a" },
+  { id: "taxes", label: "Taxes", dot: "#a0701f", fg: "#6b4a12" },
+  { id: "money", label: "Money", dot: "#1f8a7d", fg: "#115a51" },
+  { id: "healthcare", label: "Healthcare", dot: "#c04a6a", fg: "#862f48" },
+  { id: "social-benefits", label: "Social benefits", dot: "#7f8a22", fg: "#545c12" },
+  { id: "housing", label: "Housing & cost of living", dot: "#c0602e", fg: "#86401a" },
+  { id: "family", label: "Family", dot: "#b24d93", fg: "#7b3265" },
+  { id: "transport", label: "Transport", dot: "#3f6fc0", fg: "#274a8a" },
+  { id: "other", label: "Other important news", dot: "#7b8590", fg: "#4a525a" },
 ] as const;
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];

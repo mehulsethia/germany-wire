@@ -32,6 +32,20 @@ create table if not exists public.rejected_urls (
 );
 alter table public.rejected_urls enable row level security;
 
+-- One row per ingest run (cron or "Fetch now"): powers "last updated" and the cooldown.
+create table if not exists public.ingest_runs (
+  id uuid primary key default gen_random_uuid(),
+  trigger text not null default 'cron',
+  started_at timestamptz not null default now(),
+  finished_at timestamptz,
+  status text not null default 'running',
+  stored int,
+  discarded int,
+  remaining int,
+  error text
+);
+alter table public.ingest_runs enable row level security;
+
 -- Phase 2 (accounts): bookmarks
 -- create table public.user_saves (
 --   user_id uuid references auth.users not null,

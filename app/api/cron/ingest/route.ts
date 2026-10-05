@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runIngest } from "@/lib/pipeline";
+import { runLogged } from "@/lib/runs";
 import { hasSupabase } from "@/lib/supabase";
 import { llmConfigured } from "@/lib/llm";
 
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "missing Supabase env vars or OPENAI_API_KEY / ANTHROPIC_API_KEY" }, { status: 500 });
   }
   try {
-    return NextResponse.json(await runIngest());
+    return NextResponse.json(await runLogged("cron"));
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

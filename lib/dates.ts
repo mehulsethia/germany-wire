@@ -16,3 +16,13 @@ export function deadlineParts(date: string) {
     days < 0 ? "already passed" : days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
   return { month, day, full, days, relative };
 }
+
+export function timeAgo(iso: string, nowIso: string) {
+  const mins = Math.max(0, Math.round((new Date(nowIso).getTime() - new Date(iso).getTime()) / 60000));
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  if (h < 24) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  const d = Math.round(h / 24);
+  return `${d} day${d === 1 ? "" : "s"} ago`;
+}

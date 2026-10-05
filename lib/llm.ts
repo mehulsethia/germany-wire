@@ -27,7 +27,7 @@ Return ONLY a JSON object (no prose, no code fences) with:
 - relevance_score: integer 0-100 per the rubric above.
 - category: exactly one of: ${CATEGORY_IDS.join(", ")}. Use "other" only for important Germany news that fits nowhere else.
 - is_time_sensitive: true only if there is a deadline, a rule taking effect on a specific date, or something people must act on soon.
-- deadline_date: "YYYY-MM-DD" of that deadline or effective date if the text states one, else null. Never guess a date.`;
+- deadline_date: "YYYY-MM-DD" of a FUTURE deadline or effective date that the text explicitly states and that a reader can act on or plan around, else null. Never guess. Not the date an event happened, and never a date that has already passed.`;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

@@ -36,11 +36,12 @@ export async function runIngest() {
     .select("source_url")
     .in("source_url", unique.map((i) => i.url));
   (rej ?? []).forEach((r) => seen.add(r.source_url));
-  const fresh = unique
+  const unseen = unique
     .filter((i) => !seen.has(i.url))
-    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
-    .slice(0, cap);
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  const fresh = unseen.slice(0, cap);
   report.new = fresh.length;
+  report.remaining = unseen.length - fresh.length; // still waiting for the next run
 
   // 3. LLM filter + translate, small concurrency
   const rows: Record<string, unknown>[] = [];

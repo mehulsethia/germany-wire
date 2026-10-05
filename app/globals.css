@@ -1,55 +1,46 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-linen: #f6f3ea;
-  --color-paper: #fffdf8;
-  --color-sage: #7e9c88;
-  --color-sage-deep: #3d5c4c;
-  --color-sage-wash: #e7eee6;
-  --color-ink: #1e2a3a;
-  --color-ink-soft: #4d596a;
-  --color-ink-faint: #7a8494;
-  --color-amber: #c48a1a;
-  --color-amber-wash: #fbefd1;
-  --color-amber-ink: #6f4b0c;
-  --color-line: #e4dfd1;
-  --font-sans: var(--font-figtree);
-  --font-serif: var(--font-fraunces);
-  --shadow-soft: 0 1px 2px rgb(61 92 76 / 0.06), 0 8px 24px -12px rgb(61 92 76 / 0.18);
+  --color-bg: #f5f5f0;
+  --color-surface: #ffffff;
+  --color-ink: #0f1a15;
+  --color-muted: #55615b;
+  --color-faint: #86908a;
+  --color-line: #e1e2da;
+  --color-line-strong: #c9cdc3;
+  --color-forest: #1b4a37;
+  --color-forest-wash: #e5eee8;
+  --color-amber: #b7791f;
+  --color-amber-wash: #fcf1d6;
+  --color-amber-ink: #6b4510;
+  --font-sans: var(--font-geist);
 }
 
-:root {
-  color-scheme: light;
-}
+:root { color-scheme: light; }
 
 body {
-  background: var(--color-linen);
+  background: var(--color-bg);
   color: var(--color-ink);
-  font-family: var(--font-figtree), system-ui, sans-serif;
+  font-family: var(--font-geist), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv11";
 }
 
-.font-serif {
-  font-optical-sizing: auto;
-  font-variation-settings: "SOFT" 60;
-}
+.tnum { font-variant-numeric: tabular-nums; }
 
 :focus-visible {
-  outline: 2px solid var(--color-sage-deep);
-  outline-offset: 3px;
-  border-radius: 8px;
+  outline: 2px solid var(--color-forest);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
-@keyframes breathe {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
-}
-.breathe { animation: breathe 2.4s ease-in-out infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .breathe { animation: none; }
+  .spin { animation-duration: 3s; }
   * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
