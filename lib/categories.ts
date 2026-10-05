@@ -9,7 +9,7 @@ export const CATEGORIES = [
   { id: "housing", label: "Housing & cost of living", dot: "#b07a5a", bg: "#f3e6dd", fg: "#6e4630" },
   { id: "family", label: "Family", dot: "#a8708f", bg: "#f2e5ed", fg: "#6b3e58" },
   { id: "transport", label: "Transport", dot: "#6a86a8", bg: "#e4eaf2", fg: "#33496a" },
-  { id: "other", label: "Other", dot: "#8b9097", bg: "#eceeef", fg: "#464b52" },
+  { id: "other", label: "Other important news", dot: "#8b9097", bg: "#eceeef", fg: "#464b52" },
 ] as const;
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];

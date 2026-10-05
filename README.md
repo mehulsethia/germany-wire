@@ -19,7 +19,7 @@ With no Supabase keys the app shows clearly-labelled **sample content**, so the 
 ## Pipeline ([lib/pipeline.ts](lib/pipeline.ts))
 fetch 4 sources (one failing never stops the rest) → dedupe by URL vs DB → Claude translates, summarizes, scores 0-100, categorizes, flags deadlines ([lib/llm.ts](lib/llm.ts)) → drop below `RELEVANCE_THRESHOLD` (40) → upsert.
 
-Sources: Tagesschau API, Bundestag DIP (needs free `DIP_API_KEY`; skipped without it), BAMF press RSS, Bundesregierung RSS. Feed URLs can be overridden with `BAMF_RSS_URL` / `BREG_RSS_URL`.
+Sources (all free, no paid APIs): Tagesschau API, Bundesregierung RSS, BAMF press RSS, Bundestag RSS (12 topic feeds), Bundestag DIP API (free key, skipped without it), Bundesrat PlenumKOMPAKT RSS, Gesetze im Internet new-laws RSS. Not covered: make-it-in-germany.com and arbeitsagentur.de publish no RSS or news API.
 
 ## Notes
 - Saves live in localStorage (no auth). `user_saves` table is sketched, commented, in the schema for later.

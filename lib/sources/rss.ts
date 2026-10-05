@@ -11,7 +11,7 @@ const text = (v: unknown) =>
     .replace(/\s+/g, " ")
     .trim();
 
-export async function fetchRss(sourceName: string, feedUrl: string): Promise<RawItem[]> {
+export async function fetchRss(sourceName: string, feedUrl: string, opts: { limit?: number; titleFromDescription?: boolean } = {}): Promise<RawItem[]> {
   const res = await fetch(feedUrl, { cache: "no-store", headers: { "User-Agent": "GermanyWire/1.0" } });
   if (!res.ok) throw new Error(`${sourceName} ${res.status}`);
   const xml = parser.parse(await res.text());
@@ -19,26 +19,17 @@ export async function fetchRss(sourceName: string, feedUrl: string): Promise<Raw
   const items = Array.isArray(raw) ? raw : [raw];
   return items
     .filter((i) => i?.title && i?.link)
+    .slice(0, opts.limit ?? 25)
     .map((i) => {
       const d = i.pubDate ? new Date(i.pubDate) : new Date();
       return {
         sourceName,
         url: text(i.link),
-        title: text(i.title),
-        body: text(i.description),
+        // Gesetze im Internet titles are just "BGBl. 2026 I Nr. 285"; the law's name is in the description.
+        title: opts.titleFromDescription ? text(i.description) : text(i.title),
+        body: opts.titleFromDescription ? `${text(i.title)}. Neu im Bundesgesetzblatt verkündet.` : text(i.description),
         publishedAt: (isNaN(d.getTime()) ? new Date() : d).toISOString(),
       };
     });
 }
 
-export const fetchBamf = () =>
-  fetchRss(
-    "BAMF",
-    process.env.BAMF_RSS_URL ?? "https://www.BAMF.de/SiteGlobals/Functions/RSS/DE/Feed/RSSNewsfeed_Pressemitteilungen.xml",
-  );
-
-export const fetchBundesregierung = () =>
-  fetchRss(
-    "Bundesregierung",
-    process.env.BREG_RSS_URL ?? "https://www.bundesregierung.de/service/rss/breg-de/1151242/feed.xml",
-  );

@@ -1,20 +1,11 @@
 import { analyze } from "./llm";
 import { supabase } from "./supabase";
-import { fetchTagesschau } from "./sources/tagesschau";
-import { fetchDip } from "./sources/dip";
-import { fetchBamf, fetchBundesregierung } from "./sources/rss";
+import { SOURCES } from "./sources";
 import type { RawItem } from "./types";
-
-const SOURCES: [string, () => Promise<RawItem[]>][] = [
-  ["tagesschau", fetchTagesschau],
-  ["dip", fetchDip],
-  ["bamf", fetchBamf],
-  ["bundesregierung", fetchBundesregierung],
-];
 
 export async function runIngest() {
   const threshold = Number(process.env.RELEVANCE_THRESHOLD ?? 40);
-  const cap = Number(process.env.MAX_NEW_PER_RUN ?? 40);
+  const cap = Number(process.env.MAX_NEW_PER_RUN ?? 60);
   const report: Record<string, unknown> = { sources: {}, stored: 0, discarded: 0, failed: 0 };
 
   // 1. fetch every source; one failing source must not sink the run
