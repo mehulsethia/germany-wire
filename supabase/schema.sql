@@ -24,6 +24,14 @@ alter table public.articles enable row level security;
 drop policy if exists "public read" on public.articles;
 create policy "public read" on public.articles for select using (true);
 
+-- URLs the LLM judged irrelevant, so they are not re-scored on every run.
+create table if not exists public.rejected_urls (
+  source_url text primary key,
+  relevance_score int,
+  rejected_at timestamptz not null default now()
+);
+alter table public.rejected_urls enable row level security;
+
 -- Phase 2 (accounts): bookmarks
 -- create table public.user_saves (
 --   user_id uuid references auth.users not null,

@@ -4,7 +4,7 @@ import { SOURCES } from "./sources";
 import type { RawItem } from "./types";
 
 export async function runIngest() {
-  const threshold = Number(process.env.RELEVANCE_THRESHOLD ?? 40);
+  const threshold = Number(process.env.RELEVANCE_THRESHOLD ?? 35);
   const cap = Number(process.env.MAX_NEW_PER_RUN ?? 60);
   const report: Record<string, unknown> = { sources: {}, stored: 0, discarded: 0, failed: 0 };
 
@@ -30,6 +30,12 @@ export async function runIngest() {
     .in("source_url", unique.map((i) => i.url));
   if (error) throw error;
   const seen = new Set((existing ?? []).map((r) => r.source_url));
+  // Previously rejected URLs. If the table is not created yet, just skip this check.
+  const { data: rej } = await supabase()
+    .from("rejected_urls")
+    .select("source_url")
+    .in("source_url", unique.map((i) => i.url));
+  (rej ?? []).forEach((r) => seen.add(r.source_url));
   const fresh = unique
     .filter((i) => !seen.has(i.url))
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
@@ -38,6 +44,7 @@ export async function runIngest() {
 
   // 3. LLM filter + translate, small concurrency
   const rows: Record<string, unknown>[] = [];
+  const rejected: { source_url: string; relevance_score: number }[] = [];
   for (let i = 0; i < fresh.length; i += 3) {
     await Promise.all(
       fresh.slice(i, i + 3).map(async (item) => {
@@ -45,6 +52,7 @@ export async function runIngest() {
           const r = await analyze(item);
           if (r.relevance_score < threshold) {
             report.discarded = (report.discarded as number) + 1;
+            rejected.push({ source_url: item.url, relevance_score: Math.round(r.relevance_score) });
             return;
           }
           rows.push({
@@ -73,6 +81,7 @@ export async function runIngest() {
       .upsert(rows, { onConflict: "source_url", ignoreDuplicates: true });
     if (insErr) throw insErr;
   }
+  if (rejected.length) await supabase().from("rejected_urls").upsert(rejected, { onConflict: "source_url", ignoreDuplicates: true });
   report.stored = rows.length;
   return report;
 }

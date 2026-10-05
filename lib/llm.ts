@@ -18,7 +18,7 @@ const SYSTEM = `You are the strict editor of "Germany Wire", a short daily brief
 Judge each German item with one question: "Would an Indian expat living in Germany actually need to know this, or change something they do?"
 
 Score high (70-100) when it directly changes: visas, residence permits, Blue Card, Chancenkarte, citizenship, work permits, recognition of foreign degrees, employer or job-market rules, income tax, social security, pension, minimum wage, health insurance, Kindergeld/parental benefits, Bürgergeld, rent, Wohngeld, energy or grocery costs, Deutschlandticket or transport costs, bank, Schufa or ID rules, and anything with a deadline or effective date.
-Score medium (40-69) for credible context that shapes expat life: big economic or labour-market news, new bills that are likely to pass, major strikes affecting travel, housing market trends.
+Score medium (40-69) for credible context that shapes expat life: big economic or labour-market news, new bills that are likely to pass, consumer-price measures (fuel, energy, food), housing benefit or rent plans, integration and language-course funding, migration statistics and policy, pension and health-insurance debates, major strikes affecting travel, housing market trends.
 Score low (0-39) for: foreign policy and wars, military, crime and court cases, accidents, regional or local politics, party and election drama, parliamentary procedure with no practical effect, sports, culture, celebrity, weather, and anything that only matters to German citizens or to a niche industry. When unsure, score low.
 
 Return ONLY a JSON object (no prose, no code fences) with:
@@ -31,33 +31,33 @@ Return ONLY a JSON object (no prose, no code fences) with:
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function viaGemini(user: string): Promise<string> {
-  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+async function viaOpenAI(user: string): Promise<string> {
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ role: "user", parts: [{ text: user }] }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } },
+        model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: SYSTEM },
+          { role: "user", content: user },
+        ],
       }),
     });
-    // free tier rate-limits (429) and sometimes overloads (503): back off and retry
-    if ((res.status === 429 || res.status === 503) && attempt < 4) {
-      await sleep(4000 * 2 ** attempt);
+    if ((res.status === 429 || res.status >= 500) && attempt < 3) {
+      await sleep(3000 * 2 ** attempt);
       continue;
     }
-    if (!res.ok) throw new Error(`gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
-    const json = await res.json();
-    return json.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+    if (!res.ok) throw new Error(`openai ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    return (await res.json()).choices?.[0]?.message?.content ?? "";
   }
 }
 
 let anthropic: Anthropic | null = null;
 async function viaClaude(user: string): Promise<string> {
-  anthropic ??= new Anthropic();
+  anthropic ??= new Anthropic({ maxRetries: 3 });
   const msg = await anthropic.messages.create({
     model: process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
     max_tokens: 700,
@@ -68,11 +68,32 @@ async function viaClaude(user: string): Promise<string> {
   return block && block.type === "text" ? block.text : "";
 }
 
-export const llmConfigured = () => Boolean(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY);
+/** Configured providers, used turn by turn so neither key is overused. */
+function providers() {
+  const list: ((user: string) => Promise<string>)[] = [];
+  if (process.env.OPENAI_API_KEY) list.push(viaOpenAI);
+  if (process.env.ANTHROPIC_API_KEY) list.push(viaClaude);
+  return list;
+}
+
+export const llmConfigured = () => providers().length > 0;
+
+let turn = 0;
 
 export async function analyze(item: RawItem): Promise<LlmResult> {
   const user = `Source: ${item.sourceName}\nPublished: ${item.publishedAt}\nTitle (German): ${item.title}\nContent (German): ${item.body.slice(0, 3000) || "(none)"}`;
-  const raw = process.env.GEMINI_API_KEY ? await viaGemini(user) : await viaClaude(user);
-  const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
-  return Result.parse(JSON.parse(json));
+  const list = providers();
+  const start = turn++;
+  let lastErr: unknown;
+  // next provider's turn first; if it errors, the other one covers
+  for (let i = 0; i < list.length; i++) {
+    try {
+      const raw = await list[(start + i) % list.length](user);
+      const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
+      return Result.parse(JSON.parse(json));
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
 }

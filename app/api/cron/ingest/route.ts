@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     new URL(req.url).searchParams.get("key") === secret;
   if (!secret || !authed) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!hasSupabase() || !llmConfigured()) {
-    return NextResponse.json({ error: "missing Supabase env vars or GEMINI_API_KEY / ANTHROPIC_API_KEY" }, { status: 500 });
+    return NextResponse.json({ error: "missing Supabase env vars or OPENAI_API_KEY / ANTHROPIC_API_KEY" }, { status: 500 });
   }
   try {
     return NextResponse.json(await runIngest());
