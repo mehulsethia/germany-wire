@@ -33,7 +33,7 @@ export default function FetchButton() {
 
   return (
     <div className="flex flex-col items-start gap-1.5 sm:items-end">
-      <button type="button" onClick={run} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-lg bg-forest px-4 text-sm font-semibold text-white transition-colors hover:bg-ink disabled:cursor-wait disabled:opacity-80">
+      <button type="button" onClick={run} disabled={busy} className="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-forest px-4 text-sm font-semibold text-white transition-colors hover:bg-ink disabled:cursor-wait disabled:opacity-80">
         <span className={busy ? "spin" : ""}><IconRefresh /></span>
         {busy ? "Reading German sources…" : "Fetch now"}
       </button>
