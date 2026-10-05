@@ -38,9 +38,9 @@ export async function runIngest() {
 
   // 3. LLM filter + translate, small concurrency
   const rows: Record<string, unknown>[] = [];
-  for (let i = 0; i < fresh.length; i += 5) {
+  for (let i = 0; i < fresh.length; i += 3) {
     await Promise.all(
-      fresh.slice(i, i + 5).map(async (item) => {
+      fresh.slice(i, i + 3).map(async (item) => {
         try {
           const r = await analyze(item);
           if (r.relevance_score < threshold) {

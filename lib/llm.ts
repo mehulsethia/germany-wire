@@ -29,23 +29,50 @@ Return ONLY a JSON object (no prose, no code fences) with:
 - is_time_sensitive: true only if there is a deadline, a rule taking effect on a specific date, or something people must act on soon.
 - deadline_date: "YYYY-MM-DD" of that deadline or effective date if the text states one, else null. Never guess a date.`;
 
-let client: Anthropic | null = null;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function analyze(item: RawItem): Promise<LlmResult> {
-  client ??= new Anthropic();
-  const msg = await client.messages.create({
+async function viaGemini(user: string): Promise<string> {
+  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } },
+      }),
+    });
+    // free tier rate-limits (429) and sometimes overloads (503): back off and retry
+    if ((res.status === 429 || res.status === 503) && attempt < 4) {
+      await sleep(4000 * 2 ** attempt);
+      continue;
+    }
+    if (!res.ok) throw new Error(`gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const json = await res.json();
+    return json.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+  }
+}
+
+let anthropic: Anthropic | null = null;
+async function viaClaude(user: string): Promise<string> {
+  anthropic ??= new Anthropic();
+  const msg = await anthropic.messages.create({
     model: process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
     max_tokens: 700,
     system: SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: `Source: ${item.sourceName}\nPublished: ${item.publishedAt}\nTitle (German): ${item.title}\nContent (German): ${item.body.slice(0, 3000) || "(none)"}`,
-      },
-    ],
+    messages: [{ role: "user", content: user }],
   });
   const block = msg.content.find((b) => b.type === "text");
-  const raw = block && block.type === "text" ? block.text : "";
+  return block && block.type === "text" ? block.text : "";
+}
+
+export const llmConfigured = () => Boolean(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY);
+
+export async function analyze(item: RawItem): Promise<LlmResult> {
+  const user = `Source: ${item.sourceName}\nPublished: ${item.publishedAt}\nTitle (German): ${item.title}\nContent (German): ${item.body.slice(0, 3000) || "(none)"}`;
+  const raw = process.env.GEMINI_API_KEY ? await viaGemini(user) : await viaClaude(user);
   const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
   return Result.parse(JSON.parse(json));
 }
